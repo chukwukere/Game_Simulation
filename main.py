@@ -4,18 +4,54 @@ import json
 import numpy as np
 import pandas as pd
 import win_estimator
+from flask.json.provider import DefaultJSONProvider
 
-app = Flask(__name__)
+
+class NumpyArrayEncoder(DefaultJSONProvider):
+    def default(self, obj):
+        if isinstance(obj, np.ndarray):
+            return obj.tolist()
+        elif isinstance(obj, np.integer):
+            if obj.dtype == np.int32:
+                return int(obj)  # Convert int32 to Python int
+            return obj.item()  # For other NumPy integers
+        elif isinstance(obj, np.floating):
+            return float(obj)
+        else:
+            return super(NumpyArrayEncoder).default(obj)
+
+
+# class NumpyArrayEncoder(DefaultJSONProvider):
+#     def default(self, obj):
+#         if isinstance(obj, np.ndarray):
+#             return obj.tolist()
+#         elif isinstance(obj, np.integer):
+#             return int(obj)
+#         elif isinstance(obj, np.floating):
+#             return float(obj)
+#         else:
+#             return super().default(obj)
+
+
+class CustomizedFlask(Flask):
+    json_provider_class = NumpyArrayEncoder
+
+
+app = CustomizedFlask(__name__)
 api = Api(app)
 
 
-# class GetSampleData(Resource):
-#
-#     def Post(self):
-#         data_param = request.get_data()
-#         if data_param:
-#
-#         return data_param
+class GetSampleData(Resource):
+
+    def get(self):
+        play = request.args.get('play')
+        size = request.args.get('size')
+        if play is not None and size is not None:
+            response_data = win_estimator.sample_generator(play=int(play), size=int(size))
+        else:
+            response_data = "Incorrect data"
+        return response_data
+
 
 class GameSimulation(Resource):
     """"
@@ -34,9 +70,8 @@ class GameSimulation(Resource):
     def post(self):
 
         data_param = request.json
-        # # convert result data
-        converted_data = [int(i) for i in data_param["result"]]
-        data_param["result"] = np.array(converted_data).tolist()
+        data_param["result"] = np.array(data_param["result"]).tolist()
+
         if data_param:
             response_data = win_estimator.multiGameChecker(test_data=data_param["data"],
                                                            result_2=data_param["result"],
@@ -45,29 +80,7 @@ class GameSimulation(Resource):
         else:
             response_data = "Incorrect data"
 
-
-        # if data_param:
-        #     if data_param["result"] == "doped_result":
-        #         response_data = win_estimator.multiGameChecker(test_data=data_param["data"],
-        #                                                        result_2=win_estimator.dopedResult(
-        #                                                            data_set=data_param["data"]),
-        #                                                        game=data_param["game"],
-        #                                                        per_profit=data_param["per_profit"])
-        #     elif data_param["result"] == "least_number":
-        #         response_data = win_estimator.multiGameChecker(test_data=data_param["data"],
-        #                                                        result_2=win_estimator.leastOccuring(
-        #                                                            data_set=data_param["data"]),
-        #                                                        game=data_param["game"],
-        #                                                        per_profit=data_param["per_profit"])
-        #     elif data_param["result"] == "random_from_array":
-        #         response_data = win_estimator.multiGameChecker(test_data=data_param["data"],
-        #                                                        result_2=win_estimator.random_from_array(
-        #                                                            data_set=data_param["data"]),
-        #                                                        game=data_param["game"],
-        #                                                        per_profit=data_param["per_profit"])
-        #     else:
-        #         response_data = "Incorrect data"
-        return response_data
+        return jsonify(response_data)
 
 
 class WinNumber(Resource):
@@ -199,6 +212,7 @@ class WinNumber(Resource):
 
 
 api.add_resource(WinNumber, '/')
+api.add_resource(GetSampleData, '/GetSampleData')
 api.add_resource(GameSimulation, '/GameSimulation')
 
 if __name__ == '__main__':
