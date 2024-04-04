@@ -9,28 +9,21 @@ from flask.json.provider import DefaultJSONProvider
 
 class NumpyArrayEncoder(DefaultJSONProvider):
     def default(self, obj):
-        if isinstance(obj, np.ndarray):
-            return obj.tolist()
-        elif isinstance(obj, np.integer):
-            if obj.dtype == np.int32:
-                return int(obj)  # Convert int32 to Python int
-            return obj.item()  # For other NumPy integers
-        elif isinstance(obj, np.floating):
-            return float(obj)
-        else:
-            return super(NumpyArrayEncoder).default(obj)
-
-
-# class NumpyArrayEncoder(DefaultJSONProvider):
-#     def default(self, obj):
-#         if isinstance(obj, np.ndarray):
-#             return obj.tolist()
-#         elif isinstance(obj, np.integer):
-#             return int(obj)
-#         elif isinstance(obj, np.floating):
-#             return float(obj)
-#         else:
-#             return super().default(obj)
+        try:
+            if isinstance(obj, np.ndarray):
+                return obj.tolist()
+            elif isinstance(obj, np.integer):
+                if obj.dtype == np.int32:
+                    return int(obj)  # Convert int32 to Python int
+                return obj.item()  # For other NumPy integers
+            elif isinstance(obj, np.floating):
+                return float(obj)
+            else:
+                raise TypeError(" {}".format(obj))
+        except AttributeError as e:
+            return "Attribute error: {}".format(e)
+        except TypeError as e:
+            return "Type error: {}".format(e)
 
 
 class CustomizedFlask(Flask):
@@ -38,6 +31,7 @@ class CustomizedFlask(Flask):
 
 
 app = CustomizedFlask(__name__)
+# app = Flask(__name__)
 api = Api(app)
 
 
@@ -68,19 +62,24 @@ class GameSimulation(Resource):
     """
 
     def post(self):
+        try:
+            data_param = request.json
+            data_param["result"] = np.array(data_param["result"]).tolist()
 
-        data_param = request.json
-        data_param["result"] = np.array(data_param["result"]).tolist()
-
-        if data_param:
             response_data = win_estimator.multiGameChecker(test_data=data_param["data"],
                                                            result_2=data_param["result"],
                                                            game=data_param["game"],
                                                            per_profit=data_param["per_profit"])
-        else:
-            response_data = "Incorrect data"
+        except KeyError as e:
+            return "KeyError: {}".format(e)
+        except TypeError as e:
+            return "TypeError: {}".format(e)
+        except AttributeError as e:
+            return "AttributeError: {}".format(e)
 
         return jsonify(response_data)
+
+
 
 
 class WinNumber(Resource):
@@ -186,17 +185,12 @@ class WinNumber(Resource):
     """
 
     def post(self):
-        data_param = request.json
-        if data_param:
+        try:
+            data_param = request.json
             doped_result = win_estimator.dopedResult(data_set=data_param)
             least_number_result = win_estimator.leastOccuring(data_set=data_param)
             random_from_dataset = win_estimator.random_from_array(data_set=data_param)
-            # wins_from_doped = win_estimator.winratio(result=doped_result, game=data_param["game"],
-            #                                          data_set=data_param["user_play"])
-            # wins_from_least = win_estimator.winratio(result=least_number_result, game=data_param["game"],
-            #                                          data_set=data_param["user_play"])
-            # wins_from_random = win_estimator.winratio(result=random_from_dataset, game=data_param["game"],
-            #                                           data_set=data_param["user_play"])
+
             response_data = {
                 "doped method": {"win result": doped_result
                                  },
@@ -205,8 +199,10 @@ class WinNumber(Resource):
                 "random from dataset method": {"win result": random_from_dataset
                                                },
             }
-        else:
-            response_data = 'Incorrect data'
+        except KeyError as e:
+            return "KeyError: {}".format(e)
+        except AttributeError as e:
+            return "AttributeError: {}".format(e)
 
         return jsonify(response_data)
 
