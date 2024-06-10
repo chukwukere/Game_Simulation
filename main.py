@@ -80,8 +80,6 @@ class GameSimulation(Resource):
         return jsonify(response_data)
 
 
-
-
 class WinNumber(Resource):
     """
     This class contains a post endpoint that generates the winning number based request.
@@ -207,9 +205,21 @@ class WinNumber(Resource):
         return jsonify(response_data)
 
 
+class callback(Resource):
+    """
+
+    """
+    def post(self):
+        """
+        """
+        data = request.get_json()
+        return jsonify(data), 200
+
+
 api.add_resource(WinNumber, '/')
 api.add_resource(GetSampleData, '/GetSampleData')
 api.add_resource(GameSimulation, '/GameSimulation')
+api.add_resource(callback, '/callback')
 
 if __name__ == '__main__':
     app.run(debug=True)
