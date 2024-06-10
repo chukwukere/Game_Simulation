@@ -213,6 +213,7 @@ class callback(Resource):
         """
         """
         data = request.get_json()
+        print(data)
         return data, 200
 
 
