@@ -213,7 +213,7 @@ class callback(Resource):
         """
         """
         data = request.get_json()
-        return jsonify(data), 200
+        return data, 200
 
 
 api.add_resource(WinNumber, '/')
